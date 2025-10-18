@@ -38,6 +38,7 @@ The application can be configured with the following environment variables:
 - `SSE_TYPE`: Specified server side encryption (defaults blank) Valid values can be `SSE`, `KMS`, `SSE-C` all others values don't enable the SSE
 - `SSE_KEY`: The key needed for SSE method (only for `KMS` and `SSE-C`)
 - `TIMEOUT`: The read and write timeout in seconds (default to `600` - 10 minutes)
+- `ROOT_URL`: A root URL prefix if running behind a reverse proxy (defaults to unset)
 
 ### Build and Run Locally
 
@@ -51,6 +52,29 @@ The application can be configured with the following environment variables:
 ### Deploy to Kubernetes
 
 You can deploy S3 Manager to a Kubernetes cluster using the [Helm chart](https://github.com/sergeyshevch/s3manager-helm).
+
+#### Running behind a reverse proxy
+
+If there are multiple S3 users/accounts in a site then multiple instances of the S3 manager can be run in Kubernetes and expose behind a single nginx reverse proxy ingress.
+The s3manager can be run with a `ROOT_URL` environment variable set that accounts for the reverse proxy location.
+
+If the nginx configuration block looks like:
+
+```nginx
+    location /teamx/ {
+        proxy_pass http://s3manager-teamx:8080/;
+        auth_basic "teamx";
+        auth_basic_user_file /conf/teamx-htpasswd;
+    }
+    location /teamy/ {
+        proxy_pass http://s3manager-teamy:8080/;
+        <other nginx settings>
+    }
+```
+
+Then the instance behind the `s3manager-teamx` service has `ROOT_URL=teamx` and the instance behind `s3manager-teamy` has `ROOT_URL=teamy`.
+Other nginx settings can be applied to each location.
+The nginx instance can be hosted on some reachable address and reverse proxy to the different S3 accounts.
 
 ## Development
 
@@ -70,7 +94,7 @@ The image is available on [Docker Hub](https://hub.docker.com/r/cloudlena/s3mana
 
 ### Run Locally for Testing
 
-There is an example [docker-compose.yml](https://github.com/cloudlena/s3manager/blob/main/docker-compose.yml) file that spins up a S3 service and the S3 Manager. You can try it by issuing the following command:
+There is an example [docker-compose.yml](https://github.com/cloudlena/s3manager/blob/main/docker-compose.yml) file that spins up an S3 service and the S3 Manager. You can try it by issuing the following command:
 
 ```shell
 $ docker-compose up
